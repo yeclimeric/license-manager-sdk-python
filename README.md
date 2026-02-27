@@ -1,6 +1,6 @@
 # License Manager SDK (Python)
 
-`license-manager-sdk-python` 是 ThingsPanel License Manager 系列授权管控中枢的官方 Python 客户端。它与后端的 SaaS 管控网络无缝集成，专门为 B端/G端 软件、算法模型落地以及各种私有化部署提供**从在线激活到离线侧载、从机器指纹绑定到后台心跳封禁**的全套授权治理能力。
+`license-manager-sdk-python` 是 License Manager 系列授权管控中枢的官方 Python 客户端。它与后端的 SaaS 管控网络无缝集成，专门为 B端/G端 软件、算法模型落地以及各种私有化部署提供**从在线激活到离线侧载、从机器指纹绑定到后台心跳封禁**的全套授权治理能力。
 
 ## 🌟 核心能力架构
 
