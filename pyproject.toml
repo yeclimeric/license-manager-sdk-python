@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "license-manager-sdk"
+version = "1.0.0"
+authors = [
+  { name="ThingsPanel Team" },
+]
+description = "Python SDK for ThingsPanel License Manager"
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    "requests",
+    "cryptography",
+    # Add other dependencies your SDK requires here
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/thingspanel/license-manager-sdk-python"
