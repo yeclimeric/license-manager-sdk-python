@@ -18,7 +18,7 @@ from license_manager.hardware import DefaultHardwareProvider
 class DemoApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("License Manager SDK Demo")
+        self.title("License Manager 客户端模拟器")
         self.geometry("700x650")
         
         self.client = None
