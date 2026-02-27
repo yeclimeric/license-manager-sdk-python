@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "license-manager-sdk"
+name = "cedarv-license-manager-sdk"
 version = "1.0.0"
 authors = [
   { name="cedar-v Team" },
