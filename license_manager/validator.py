@@ -12,7 +12,12 @@ from license_manager.models import LicensePayload, LicenseEnvelope
 
 
 class Validator:
-    def __init__(self, pem_bytes: bytes):
+    def __init__(self, pem_bytes: bytes = b""):
+        self.pub = None
+        if pem_bytes:
+            self._set_pub_key(pem_bytes)
+
+    def _set_pub_key(self, pem_bytes: bytes) -> None:
         if not pem_bytes:
             raise ValueError("validator: missing public key")
             
@@ -27,6 +32,8 @@ class Validator:
             raise ValueError(f"validator: parse public key: {e}")
 
     def verify(self, envelope_bytes: bytes, fingerprint: str) -> LicensePayload:
+        if not self.pub:
+            raise ValueError("validator: public key not set, activation response may be pending")
         try:
             env_dict = json.loads(envelope_bytes)
             env = LicenseEnvelope.from_dict(env_dict)
@@ -53,7 +60,10 @@ class Validator:
             payload.expires_at = payload.end_date
             
         if fingerprint and payload.hardware_fingerprint and payload.hardware_fingerprint != fingerprint:
-            raise ValueError("validator: hardware fingerprint mismatch")
+            raise ValueError(
+                f"validator: hardware fingerprint mismatch: "
+                f"license={payload.hardware_fingerprint} vs local={fingerprint}"
+            )
             
         if payload.expires_at:
             now = datetime.now(timezone.utc)

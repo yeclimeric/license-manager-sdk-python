@@ -1,6 +1,7 @@
 import base64
 import json
 import logging
+import os
 import threading
 from datetime import datetime, timezone
 from typing import Callable, Optional
@@ -20,12 +21,14 @@ class Callbacks:
         on_license_updated: Optional[Callable[[LicensePayload], None]] = None,
         on_heartbeat_error: Optional[Callable[[Exception], None]] = None,
         on_activation_required: Optional[Callable[[str], None]] = None,
-        on_heartbeat_ping: Optional[Callable[[], None]] = None
+        on_heartbeat_ping: Optional[Callable[[], None]] = None,
+        on_public_key_updated: Optional[Callable[[str], None]] = None,
     ):
         self.on_license_updated = on_license_updated
         self.on_heartbeat_error = on_heartbeat_error
         self.on_activation_required = on_activation_required
         self.on_heartbeat_ping = on_heartbeat_ping
+        self.on_public_key_updated = on_public_key_updated
 
 
 class ClientOptions:
@@ -46,8 +49,10 @@ class Client:
             raise ValueError("license: config is required")
             
         cfg.validate()
-        pub_key = cfg.resolve_public_key()
-        
+        pub_key = self._load_stored_pub_key(cfg.storage_path)
+        if not pub_key:
+            pub_key = cfg.public_key_pem
+
         self.cfg = cfg
         opts = opts or ClientOptions()
         
@@ -55,7 +60,7 @@ class Client:
         self.hardware = opts.hardware_provider or DefaultHardwareProvider(cfg.hardware_fields)
         self.callbacks = opts.callbacks
         
-        self.validator = Validator(pub_key)
+        self.validator = Validator(pub_key or b"")
         self.activate_svc = ActivationService(cfg)
         self.heartbeat_svc = HeartbeatService(cfg)
         self.heartbeat_manager: Optional[HeartbeatManager] = None
@@ -130,6 +135,31 @@ class Client:
         self._perform_activation()
         self._start_heartbeat()
 
+    def _pub_key_path(self, storage_path: str) -> str:
+        base = storage_path.rsplit('.', 1)[0]
+        return base + ".pubkey"
+
+    def _load_stored_pub_key(self, storage_path: str) -> Optional[bytes]:
+        pub_path = self._pub_key_path(storage_path)
+        if not os.path.exists(pub_path):
+            return None
+        try:
+            with open(pub_path, 'rb') as f:
+                return f.read()
+        except Exception:
+            return None
+
+    def _save_pub_key(self, pub_bytes: bytes) -> None:
+        pub_path = self._pub_key_path(self.cfg.storage_path)
+        try:
+            dir_name = os.path.dirname(pub_path)
+            if dir_name:
+                os.makedirs(dir_name, exist_ok=True)
+            with open(pub_path, 'wb') as f:
+                f.write(pub_bytes)
+        except Exception:
+            pass
+
     def _load_existing(self):
         try:
             data = self.store.load()
@@ -170,18 +200,18 @@ class Client:
         if not resp.license_file:
             raise ValueError("license: activation response missing license file")
             
-        payload = self._apply_license_file(resp.license_file)
+        payload = self._apply_license_file(resp.license_file, new_pub_key=resp.public_key)
         
         with self._lock:
             self.license_key = resp.license_key
 
-    def _apply_license_file(self, base64_file: str) -> LicensePayload:
+    def _apply_license_file(self, base64_file: str, new_pub_key: Optional[str] = None) -> LicensePayload:
         try:
             raw = base64.b64decode(base64_file)
         except Exception as e:
             raise ValueError(f"license: decode license file: {e}")
             
-        payload = self._validate_and_store(raw)
+        payload = self._validate_and_store(raw, new_pub_key=new_pub_key)
         
         with self._lock:
             self.current = payload
@@ -190,7 +220,16 @@ class Client:
                 
         return payload
 
-    def _validate_and_store(self, raw: bytes) -> LicensePayload:
+    def _validate_and_store(self, raw: bytes, new_pub_key: Optional[str] = None) -> LicensePayload:
+        if new_pub_key:
+            pub_bytes = new_pub_key.encode('utf-8')
+            self.validator._set_pub_key(pub_bytes)
+            self._save_pub_key(pub_bytes)
+            if self.callbacks.on_public_key_updated:
+                try:
+                    self.callbacks.on_public_key_updated(new_pub_key)
+                except Exception:
+                    pass
         normalized = self._normalize_license_bytes(raw)
         payload = self.validator.verify(normalized, self.fingerprint)
         

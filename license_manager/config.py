@@ -48,10 +48,11 @@ class Config:
             
         if not self.storage_path:
             self.storage_path = self.license_file_path
-            
-        self.resolve_public_key()
-        
-        if not self.offline:
+
+        if self.offline:
+            self.resolve_public_key()
+            self.resolve_authorization_code()
+        else:
             self.resolve_authorization_code()
 
     def resolve_public_key(self) -> bytes:

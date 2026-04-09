@@ -118,6 +118,7 @@ class ActivateResponse:
     license_file: str
     heartbeat_interval: int
     payload: Optional[LicensePayload] = None
+    public_key: Optional[str] = None  # 服务端返回的最新公钥
 
     @classmethod
     def from_dict(cls, data: dict) -> "ActivateResponse":
@@ -127,7 +128,8 @@ class ActivateResponse:
             license_key=data.get("license_key", ""),
             license_file=data.get("license_file", ""),
             heartbeat_interval=data.get("heartbeat_interval", 0),
-            payload=payload
+            payload=payload,
+            public_key=data.get("public_key"),
         )
 
 

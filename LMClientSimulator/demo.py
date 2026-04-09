@@ -8,12 +8,11 @@ import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
 
 # Ensure the SDK root is in PYTHONPATH to allow running demo.py standalone
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from license_manager.client import Client, ClientOptions, Callbacks
 from license_manager.config import Config
 from license_manager.models import LicensePayload
-from license_manager.hardware import DefaultHardwareProvider
 
 # 无激活码时仅加载本地 license.lic：满足 Config 校验且避免走空激活请求
 LOCAL_AUTH_PLACEHOLDER = "LOADED_FROM_LOCAL_CACHE"
@@ -29,7 +28,9 @@ class DemoApp(tk.Tk):
         # 模拟断网：monkey-patch requests.Session.post；None 表示当前未拦截
         self._net_mock_orig_post = None
 
-        hw = DefaultHardwareProvider(["mac", "cpu", "hostname"])
+        # 用 Client 内部同样的逻辑获取指纹，确保 UI 显示的和激活发给系统的一样
+        from license_manager.hardware import DefaultHardwareProvider
+        hw = DefaultHardwareProvider(["cpu"])
         try:
             self.fingerprint, _ = hw.fingerprint()
         except Exception:
@@ -181,11 +182,19 @@ class DemoApp(tk.Tk):
     def on_heartbeat_ping(self):
         self._safe_log(f"[后台轮询] 成功向服务器上报设备在线心跳！")
 
+    def on_public_key_updated(self, new_pub_key: str):
+        self.after(0, lambda pk=new_pub_key: self._do_update_pubkey(pk))
+
+    def _do_update_pubkey(self, new_pub_key: str):
+        self.txt_pubkey.delete("1.0", tk.END)
+        self.txt_pubkey.insert("1.0", new_pub_key)
+        self._safe_log(f"[公钥更新] 已自动替换为服务端最新公钥，后续激活无需再手动填入。")
+
     # --- 核心业务连贯逻辑 ---
     def get_sdk_config(self, auth_code: str = "") -> Config:
         server_url = self.entry_server.get().strip()
         if not server_url:
-            server_url = "http://43.136.177.43:18081"
+            server_url = "http://lm-e.cedar-v.com/"
 
         pub_key_str = self.txt_pubkey.get("1.0", tk.END).strip()
         pub_key_bytes = pub_key_str.encode('utf-8') if pub_key_str else b""
@@ -197,7 +206,8 @@ class DemoApp(tk.Tk):
             authorization_code=auth_code,
             license_file_path="license.lic",
             heartbeat_interval_seconds=10,
-            public_key_pem=pub_key_bytes
+            public_key_pem=pub_key_bytes,
+            hardware_fields=["cpu"],
         )
 
     def on_activate_click(self):
@@ -331,7 +341,8 @@ class DemoApp(tk.Tk):
                 on_license_updated=self.on_license_updated,
                 on_activation_required=self.on_activation_required,
                 on_heartbeat_error=self.on_heartbeat_error,
-                on_heartbeat_ping=self.on_heartbeat_ping
+                on_heartbeat_ping=self.on_heartbeat_ping,
+                on_public_key_updated=self.on_public_key_updated
             )
         )
         self.client = Client(cfg, opts=opts)
@@ -342,10 +353,23 @@ class DemoApp(tk.Tk):
         else:
             self._safe_update_status(None)
 
+    def _license_pubkey_path(self, lic_path: str) -> str:
+        return lic_path.rsplit('.', 1)[0] + ".pubkey"
+
     def on_clear_click(self):
         if self.client:
             self.client.close()
             self.client = None
+        cfg = self.get_sdk_config()
+        for path in [cfg.license_file_path, self._license_pubkey_path(cfg.license_file_path)]:
+            if path and os.path.exists(path):
+                try:
+                    os.remove(path)
+                    self._log(f"已删除: {path}")
+                except Exception as e:
+                    self._log(f"删除失败 {path}: {e}")
+        self.txt_pubkey.delete("1.0", tk.END)
+        self._safe_update_status(None)
 
     def on_edit_license_click(self):
         """弹窗：读取/修改/新建本地 license.lic，不校验内容格式，直接保存用户输入。"""
@@ -491,7 +515,7 @@ class DemoApp(tk.Tk):
                 self.client.validate()
                 self._safe_log("【业务端】离线缓存验证: 通过。")
                 self._safe_log("=" * 50)
-                self._safe_update_status(self.client)
+                self._safe_update_status(self.client.current)
                 self.after(0, lambda: messagebox.showinfo("业务层", "授权正常（离线缓存）！\nAI 模板匹配算法已成功启动，正在处理图像帧..."))
                 return
             except Exception as local_err:

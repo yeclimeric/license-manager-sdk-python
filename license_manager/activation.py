@@ -25,7 +25,7 @@ class ActivationService:
     def activate(self, req: ActivateRequest) -> ActivateResponse:
         url = f"{self.base_url}/api/v1/activate"
         payload = req.to_dict()
-        
+
         try:
             resp = self.session.post(url, json=payload, timeout=self.timeout)
         except RequestException as e:
