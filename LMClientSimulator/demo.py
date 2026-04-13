@@ -21,7 +21,7 @@ LOCAL_AUTH_PLACEHOLDER = "LOADED_FROM_LOCAL_CACHE"
 class DemoApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("License Manager 客户端模拟器")
+        self.title("License Manager 客户端模拟器v1.0.5")
         self.geometry("700x650")
 
         self.client = None
