@@ -86,15 +86,29 @@ class Validator:
                     hashes.SHA256()
                 )
             elif algorithm == "RSA-PSS-SHA256":
-                self.pub.verify(
-                    sig,
-                    data,
-                    padding.PSS(
-                        mgf=padding.MGF1(hashes.SHA256()),
-                        salt_length=padding.PSS.MAX_LENGTH
-                    ),
-                    hashes.SHA256()
+                # Go 服务端以 rsa.PSSSaltLengthEqualsHash 签名（盐长=摘要长度），
+                # 而部分客户端以 MAX_LENGTH 签发。验签时盐长必须精确匹配，
+                # 因此依次尝试 EqualsHash 与 MAX_LENGTH 两种盐长。
+                salt_lengths = (
+                    hashes.SHA256().digest_size,  # PSSSaltLengthEqualsHash
+                    padding.PSS.MAX_LENGTH,
                 )
+                last_err: Optional[InvalidSignature] = None
+                for salt_length in salt_lengths:
+                    try:
+                        self.pub.verify(
+                            sig,
+                            data,
+                            padding.PSS(
+                                mgf=padding.MGF1(hashes.SHA256()),
+                                salt_length=salt_length
+                            ),
+                            hashes.SHA256()
+                        )
+                        return
+                    except InvalidSignature as e:
+                        last_err = e
+                raise last_err if last_err else InvalidSignature()
             else:
                 self.pub.verify(
                     sig,
