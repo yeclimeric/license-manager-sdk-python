@@ -1,12 +1,14 @@
-import time
 import logging
-from license_manager.client import Client, ClientOptions, Callbacks
+import time
+
+from license_manager.client import Callbacks, Client, ClientOptions
 from license_manager.config import Config
 from license_manager.models import LicensePayload
 
+
 def main():
     logging.basicConfig(level=logging.INFO)
-    
+
     cfg = Config(
         server="https://license.example.com",
         product="edge-gateway",
@@ -30,9 +32,9 @@ def main():
     callbacks = Callbacks(
         on_license_updated=on_license_updated,
         on_heartbeat_error=on_heartbeat_error,
-        on_activation_required=on_activation_required
+        on_activation_required=on_activation_required,
     )
-    
+
     opts = ClientOptions(callbacks=callbacks)
 
     try:
@@ -47,7 +49,7 @@ def main():
     if lic:
         logging.info(f"状态={lic.status} 过期={lic.expires_at}")
         logging.info(f"最大激活={lic.max_activations} key={lic.license_key}")
-        
+
     logging.info("主线程执行日常业务任务中...")
     try:
         time.sleep(35)
@@ -56,6 +58,7 @@ def main():
     finally:
         logging.info("关闭 SDK 客户端以终止后台心跳.")
         client.close()
+
 
 if __name__ == "__main__":
     main()

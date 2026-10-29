@@ -14,18 +14,18 @@ class LicensePayload:
     start_date: datetime
     end_date: datetime
     expires_at: datetime
-    
+
     product: Optional[str] = None
     version: Optional[str] = None
     authorization_code_id: Optional[str] = None
     deployment_type: Optional[str] = None
     max_activations: Optional[int] = None
-    
+
     custom_parameters: Dict[str, Any] = field(default_factory=dict)
     feature_config: Dict[str, Any] = field(default_factory=dict)
     usage_limits: Dict[str, Any] = field(default_factory=dict)
     extras: Dict[str, Any] = field(default_factory=dict)
-    
+
     activated_at: Optional[datetime] = None
     generated_at: Optional[datetime] = None
     config_updated_at: Optional[datetime] = None
@@ -45,9 +45,9 @@ class LicensePayload:
                 return None
 
         # expires_at is not explicitly in JSON sometimes, handled differently in Go?
-        # In Go, ExpiresAt is populated by the validator based on EndDate or similar logic, 
+        # In Go, ExpiresAt is populated by the validator based on EndDate or similar logic,
         # or from a different field. We'll set it to end_date as default parser.
-        
+
         args = {
             "license_key": data.get("license_key", ""),
             "authorization_code": data.get("authorization_code", ""),
@@ -68,10 +68,10 @@ class LicensePayload:
             "generated_at": parse_time(data.get("generated_at")),
             "config_updated_at": parse_time(data.get("config_updated_at")),
         }
-        
+
         # In Go ExpiresAt has json:"-" meaning it's internal.
         args["expires_at"] = args["end_date"]
-        
+
         return cls(**args)
 
 
@@ -86,7 +86,7 @@ class LicenseEnvelope:
         return cls(
             algorithm=data.get("algorithm", ""),
             data=data.get("data", ""),
-            signature=data.get("signature", "")
+            signature=data.get("signature", ""),
         )
 
 
@@ -172,7 +172,7 @@ class HeartbeatResponse:
             license_file=data.get("license_file"),
             heartbeat_interval=data.get("heartbeat_interval"),
             config_updated=data.get("config_updated"),
-            payload=payload
+            payload=payload,
         )
 
 
@@ -187,5 +187,5 @@ class APIError:
         return cls(
             code=data.get("code", ""),
             message=data.get("message", ""),
-            timestamp=data.get("timestamp", "")
+            timestamp=data.get("timestamp", ""),
         )

@@ -2,15 +2,15 @@ import base64
 import os
 import sys
 import threading
-from typing import Optional
 import time
 import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
+from typing import Optional
 
 # Ensure the SDK root is in PYTHONPATH to allow running demo.py standalone
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from license_manager.client import Client, ClientOptions, Callbacks
+from license_manager.client import Callbacks, Client, ClientOptions
 from license_manager.config import Config
 from license_manager.models import LicensePayload
 
@@ -30,6 +30,7 @@ class DemoApp(tk.Tk):
 
         # 用 Client 内部同样的逻辑获取指纹，确保 UI 显示的和激活发给系统的一样
         from license_manager.hardware import DefaultHardwareProvider
+
         hw = DefaultHardwareProvider(["cpu"])
         try:
             self.fingerprint, _ = hw.fingerprint()
@@ -37,7 +38,9 @@ class DemoApp(tk.Tk):
             self.fingerprint = "Unknown"
 
         self._build_ui()
-        self._log("系统初始化完毕。激活码可留空：将仅验证本地 license.lic；填写后可在线激活或带脱机包降级。")
+        self._log(
+            "系统初始化完毕。激活码可留空：将仅验证本地 license.lic；填写后可在线激活或带脱机包降级。"
+        )
         self._log(f"当前设备指纹: {self.fingerprint}")
 
     def _build_ui(self):
@@ -55,7 +58,9 @@ class DemoApp(tk.Tk):
         tk.Button(top_frame, text="复制", command=self._copy_fp).grid(row=0, column=2, padx=5)
 
         tk.Label(top_frame, text="授权状态:").grid(row=1, column=0, sticky="w", pady=(5, 0))
-        self.lbl_status = tk.Label(top_frame, text="未激活", fg="red", font=("Helvetica", 12, "bold"))
+        self.lbl_status = tk.Label(
+            top_frame, text="未激活", fg="red", font=("Helvetica", 12, "bold")
+        )
         self.lbl_status.grid(row=1, column=1, sticky="w", pady=(5, 0))
 
         tk.Label(top_frame, text="到期时间:").grid(row=2, column=0, sticky="w")
@@ -72,18 +77,23 @@ class DemoApp(tk.Tk):
         self.entry_server.grid(row=0, column=1, padx=5, pady=2)
 
         tk.Label(mid_frame, text="RSA 公钥 (PEM):").grid(row=1, column=0, sticky="nw", pady=2)
-        self.txt_pubkey = scrolledtext.ScrolledText(mid_frame, width=58, height=4, font=("Consolas", 9))
-        self.txt_pubkey.insert("1.0", (
-            "-----BEGIN PUBLIC KEY-----\n"
-            "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5hGz3hws+L2MUW7CaRQI\n"
-            "t7Vxk0KAdPBUuNdkJcs2kpgkDmiT/pHf+9WXfRVdKD/Eu/t7wckQfzziddXTbeCx\n"
-            "gN/5bKSeLTPXT0VvvSkfB5FUUQABHFWO4fiBlfP/NdFy++qKgCUF1wGg+jSsrhAw\n"
-            "6oMDI7MHVRfRZTe3rTM3T0qi3Ed6qaoIM9INQ87FcqPVMyQ/KXbe4Dz5yVkLY5iY\n"
-            "j8ZJP7iU2vKYvWIG9TNv0FK/dXQk7syMGBSKmIncCe+UaflAajbDGXq52gIeTyhO\n"
-            "BumOLXXBdlwgCVtejBTqDmlQpiJYADKiZLQfx0z1hYbbOPBPB3djXCJJmQk69sso\n"
-            "ZQIDAQAB\n"
-            "-----END PUBLIC KEY-----"
-        ))
+        self.txt_pubkey = scrolledtext.ScrolledText(
+            mid_frame, width=58, height=4, font=("Consolas", 9)
+        )
+        self.txt_pubkey.insert(
+            "1.0",
+            (
+                "-----BEGIN PUBLIC KEY-----\n"
+                "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5hGz3hws+L2MUW7CaRQI\n"
+                "t7Vxk0KAdPBUuNdkJcs2kpgkDmiT/pHf+9WXfRVdKD/Eu/t7wckQfzziddXTbeCx\n"
+                "gN/5bKSeLTPXT0VvvSkfB5FUUQABHFWO4fiBlfP/NdFy++qKgCUF1wGg+jSsrhAw\n"
+                "6oMDI7MHVRfRZTe3rTM3T0qi3Ed6qaoIM9INQ87FcqPVMyQ/KXbe4Dz5yVkLY5iY\n"
+                "j8ZJP7iU2vKYvWIG9TNv0FK/dXQk7syMGBSKmIncCe+UaflAajbDGXq52gIeTyhO\n"
+                "BumOLXXBdlwgCVtejBTqDmlQpiJYADKiZLQfx0z1hYbbOPBPB3djXCJJmQk69sso\n"
+                "ZQIDAQAB\n"
+                "-----END PUBLIC KEY-----"
+            ),
+        )
         self.txt_pubkey.grid(row=1, column=1, padx=5, pady=2)
 
         tk.Label(mid_frame, text="授权码/产品激活码:").grid(row=2, column=0, sticky="w", pady=2)
@@ -93,9 +103,20 @@ class DemoApp(tk.Tk):
         btn_frame = tk.Frame(mid_frame)
         btn_frame.grid(row=3, column=0, columnspan=2, pady=10, sticky="w")
 
-        tk.Button(btn_frame, text="激活 / 验证", bg="#4CAF50", fg="white", width=15, command=self.on_activate_click).pack(side="left", padx=5)
-        tk.Button(btn_frame, text="清理本地许可缓存", width=15, command=self.on_clear_click).pack(side="left", padx=5)
-        tk.Button(btn_frame, text="创建/修改许可证", width=15, command=self.on_edit_license_click).pack(side="left", padx=5)
+        tk.Button(
+            btn_frame,
+            text="激活 / 验证",
+            bg="#4CAF50",
+            fg="white",
+            width=15,
+            command=self.on_activate_click,
+        ).pack(side="left", padx=5)
+        tk.Button(btn_frame, text="清理本地许可缓存", width=15, command=self.on_clear_click).pack(
+            side="left", padx=5
+        )
+        tk.Button(
+            btn_frame, text="创建/修改许可证", width=15, command=self.on_edit_license_click
+        ).pack(side="left", padx=5)
 
         # 区域三：业务模拟与底座运行日志
         bot_frame = tk.LabelFrame(self, text="机器视觉核心业务模拟与日志", padx=10, pady=10)
@@ -114,20 +135,26 @@ class DemoApp(tk.Tk):
         tk.Label(switch_frame, text="模拟断网:").pack(side="left", padx=(0, 5))
 
         net_check = ttk.Checkbutton(
-            switch_frame, text="开启",
+            switch_frame,
+            text="开启",
             variable=self.net_offline,
-            command=self._on_net_switch_changed
+            command=self._on_net_switch_changed,
         )
         net_check.pack(side="left")
 
-        self.net_mode_label = tk.Label(switch_frame, text="外网（联网）", fg="#4CAF50", font=("Helvetica", 10, "bold"))
+        self.net_mode_label = tk.Label(
+            switch_frame, text="外网（联网）", fg="#4CAF50", font=("Helvetica", 10, "bold")
+        )
         self.net_mode_label.pack(side="left", padx=(8, 0))
 
         # 业务主按钮
         self.btn_run_ai = tk.Button(
-            ctrl_frame, text="[业务] AI 模板检测",
-            bg="#2196F3", fg="white", font=("Helvetica", 14),
-            command=self.on_run_ai_click
+            ctrl_frame,
+            text="[业务] AI 模板检测",
+            bg="#2196F3",
+            fg="white",
+            font=("Helvetica", 14),
+            command=self.on_run_ai_click,
         )
         self.btn_run_ai.pack(side="left", fill="x", expand=True)
 
@@ -147,7 +174,9 @@ class DemoApp(tk.Tk):
     def _update_status(self, payload: LicensePayload):
         if payload and payload.license_key:
             self.lbl_status.config(text="验证通过 (合法)", fg="green")
-            exp_str = payload.expires_at.strftime("%Y-%m-%d %H:%M:%S") if payload.expires_at else "永久"
+            exp_str = (
+                payload.expires_at.strftime("%Y-%m-%d %H:%M:%S") if payload.expires_at else "永久"
+            )
             self.lbl_expire.config(text=exp_str)
         else:
             self.lbl_status.config(text="未激活 / 被锁定", fg="red")
@@ -164,19 +193,25 @@ class DemoApp(tk.Tk):
 
     # --- SDK 钩子定义 ---
     def on_license_updated(self, lic: LicensePayload):
-        self._safe_log(f"-> 钩子触发: [on_license_updated] 下发了有效的新证书！到期: {lic.expires_at}")
+        self._safe_log(
+            f"-> 钩子触发: [on_license_updated] 下发了有效的新证书！到期: {lic.expires_at}"
+        )
         self._safe_update_status(lic)
 
     def on_activation_required(self, reason: str):
         self._safe_log(f"-> 钩子触发: [on_activation_required] 授权已被驳回/封禁！原因: {reason}")
         self.after(0, lambda: self.lbl_status.config(text=f"锁定: {reason}", fg="red"))
-        self._safe_alert("授权已失效", f"您的授权已被服务器拒绝或锁定，请联系管理员。\n底层原因: {reason}")
+        self._safe_alert(
+            "授权已失效", f"您的授权已被服务器拒绝或锁定，请联系管理员。\n底层原因: {reason}"
+        )
 
     def on_heartbeat_error(self, err: Exception):
         msg = str(err)
         self._safe_log(f"[后台轮询] 心跳无法连接服务器/遭遇异常: {msg}")
         if "300006" in msg:
-            self._safe_log("[安全策略阻断] 服务端反馈许可不存在！您的授权已被撤销或转移。正在清理本地许可凭证...")
+            self._safe_log(
+                "[安全策略阻断] 服务端反馈许可不存在！您的授权已被撤销或转移。正在清理本地许可凭证..."
+            )
             self.after(500, self.on_clear_click)
 
     def on_heartbeat_ping(self):
@@ -197,7 +232,7 @@ class DemoApp(tk.Tk):
             server_url = "http://lm-e.cedar-v.com/"
 
         pub_key_str = self.txt_pubkey.get("1.0", tk.END).strip()
-        pub_key_bytes = pub_key_str.encode('utf-8') if pub_key_str else b""
+        pub_key_bytes = pub_key_str.encode("utf-8") if pub_key_str else b""
 
         return Config(
             server=server_url,
@@ -229,7 +264,9 @@ class DemoApp(tk.Tk):
             cfg.authorization_code = user_input
             self._log("-> 识别为纯在线授权码。")
 
-        threading.Thread(target=self._activate_logic_thread, args=(cfg, envelope_b64), daemon=True).start()
+        threading.Thread(
+            target=self._activate_logic_thread, args=(cfg, envelope_b64), daemon=True
+        ).start()
 
     def _activate_local_only_thread(self):
         """激活码为空：不删本地文件，仅用占位码走 SDK 本地加载。"""
@@ -239,10 +276,13 @@ class DemoApp(tk.Tk):
         if not os.path.exists(path):
             self._safe_log("-> 未找到本地 license.lic，无法在无激活码时验证。")
             self._safe_update_status(None)
-            self.after(0, lambda: messagebox.showwarning(
-                "提示",
-                "未填写授权码/产品激活码时，需要存在本地许可文件 license.lic。\n请先完成一次在线激活，或粘贴含脱机包的激活码。"
-            ))
+            self.after(
+                0,
+                lambda: messagebox.showwarning(
+                    "提示",
+                    "未填写授权码/产品激活码时，需要存在本地许可文件 license.lic。\n请先完成一次在线激活，或粘贴含脱机包的激活码。",
+                ),
+            )
             return
         if self._net_simulates_disconnect():
             self._apply_network_disconnect_mock()
@@ -278,7 +318,9 @@ class DemoApp(tk.Tk):
             except Exception as local_err:
                 self._safe_log(f"-> [离线激活] 本地缓存验证失败: {local_err}")
                 if not envelope_b64:
-                    self._safe_log("-> 致命错误：断网且无脱机包，授权流程被阻断。（本地 license.lic 已保留）")
+                    self._safe_log(
+                        "-> 致命错误：断网且无脱机包，授权流程被阻断。（本地 license.lic 已保留）"
+                    )
                     self._safe_update_status(None)
                     if not self._net_simulates_disconnect():
                         self._restore_network_disconnect_mock()
@@ -301,7 +343,9 @@ class DemoApp(tk.Tk):
             self._safe_log(f"-> 在线激活遭遇异常/网络不通: {msg}")
 
             if envelope_b64:
-                self._safe_log("-> [策略] 检测到网络无法完成激活，正在自动降级使用脱机包进行完全物理隔离验证...")
+                self._safe_log(
+                    "-> [策略] 检测到网络无法完成激活，正在自动降级使用脱机包进行完全物理隔离验证..."
+                )
                 try:
                     payload_bytes = base64.b64decode(envelope_b64)
                     with open(cfg.license_file_path, "wb") as f:
@@ -324,6 +368,7 @@ class DemoApp(tk.Tk):
 
     def _init_client_impl(self, cfg: Config):
         from license_manager.models import HeartbeatResponse
+
         original_from_dict = HeartbeatResponse.from_dict
 
         def patched_from_dict(data: dict) -> HeartbeatResponse:
@@ -342,7 +387,7 @@ class DemoApp(tk.Tk):
                 on_activation_required=self.on_activation_required,
                 on_heartbeat_error=self.on_heartbeat_error,
                 on_heartbeat_ping=self.on_heartbeat_ping,
-                on_public_key_updated=self.on_public_key_updated
+                on_public_key_updated=self.on_public_key_updated,
             )
         )
         self.client = Client(cfg, opts=opts)
@@ -354,7 +399,7 @@ class DemoApp(tk.Tk):
             self._safe_update_status(None)
 
     def _license_pubkey_path(self, lic_path: str) -> str:
-        return lic_path.rsplit('.', 1)[0] + ".pubkey"
+        return lic_path.rsplit(".", 1)[0] + ".pubkey"
 
     def on_clear_click(self):
         if self.client:
@@ -381,7 +426,9 @@ class DemoApp(tk.Tk):
         win.transient(self)
         win.grab_set()
 
-        tk.Label(win, text="请输入或粘贴许可证内容（可以是任意格式）：").pack(anchor="w", padx=10, pady=(10, 2))
+        tk.Label(win, text="请输入或粘贴许可证内容（可以是任意格式）：").pack(
+            anchor="w", padx=10, pady=(10, 2)
+        )
 
         txt = scrolledtext.ScrolledText(win, width=90, height=22, font=("Consolas", 9))
         txt.pack(fill="both", expand=True, padx=10, pady=5)
@@ -411,8 +458,14 @@ class DemoApp(tk.Tk):
             except Exception as e:
                 messagebox.showerror("保存失败", str(e), parent=win)
 
-        tk.Button(btn_row, text="保存到本地 license.lic", bg="#4CAF50", fg="white",
-                  width=22, command=_do_save).pack(side="left", padx=5)
+        tk.Button(
+            btn_row,
+            text="保存到本地 license.lic",
+            bg="#4CAF50",
+            fg="white",
+            width=22,
+            command=_do_save,
+        ).pack(side="left", padx=5)
         tk.Button(btn_row, text="取消", width=15, command=win.destroy).pack(side="right", padx=5)
 
         self._restore_network_disconnect_mock()
@@ -467,7 +520,9 @@ class DemoApp(tk.Tk):
             cfg = self.get_sdk_config()
             cfg.authorization_code = LOCAL_AUTH_PLACEHOLDER
             self._log("=" * 50)
-            offline_desc = "（模拟断网：心跳持续尝试，网络恢复即上报）" if offline_fallback else "（联网心跳）"
+            offline_desc = (
+                "（模拟断网：心跳持续尝试，网络恢复即上报）" if offline_fallback else "（联网心跳）"
+            )
             self._log(f"[业务开始] 未填激活码：仅验证本地 license.lic{offline_desc}")
             if offline_fallback:
                 self._log("-> [模拟断网] 业务逻辑不变，心跳持续尝试，网络恢复立即上报。")
@@ -498,7 +553,13 @@ class DemoApp(tk.Tk):
             daemon=True,
         ).start()
 
-    def _biz_thread(self, cfg: Config, envelope_b64: Optional[str], force_offline: bool, local_only: bool = False):
+    def _biz_thread(
+        self,
+        cfg: Config,
+        envelope_b64: Optional[str],
+        force_offline: bool,
+        local_only: bool = False,
+    ):
         """统一的业务执行线程。local_only=True 时不删除本地 license，仅加载后校验。"""
         self.after(0, self._close_client_unsafe)
 
@@ -516,26 +577,38 @@ class DemoApp(tk.Tk):
                 self._safe_log("【业务端】离线缓存验证: 通过。")
                 self._safe_log("=" * 50)
                 self._safe_update_status(self.client.current)
-                self.after(0, lambda: messagebox.showinfo("业务层", "授权正常（离线缓存）！\nAI 模板匹配算法已成功启动，正在处理图像帧..."))
+                self.after(
+                    0,
+                    lambda: messagebox.showinfo(
+                        "业务层",
+                        "授权正常（离线缓存）！\nAI 模板匹配算法已成功启动，正在处理图像帧...",
+                    ),
+                )
                 return
             except Exception as local_err:
                 self._safe_log(f"-> [离线缓存] 验证失败: {local_err}")
                 self._safe_log("-> [阻断] 断网且本地许可证无效，无法继续（请联网后重试）。")
                 self._safe_update_status(None)
-                self.after(0, lambda: messagebox.showerror(
-                    "越权阻断",
-                    f"断网环境下本地许可证验证失败：{local_err}\n\n请恢复网络连接后重新运行业务。"
-                ))
+                self.after(
+                    0,
+                    lambda: messagebox.showerror(
+                        "越权阻断",
+                        f"断网环境下本地许可证验证失败：{local_err}\n\n请恢复网络连接后重新运行业务。",
+                    ),
+                )
                 return
 
         if local_only:
             if not os.path.exists(cfg.license_file_path):
                 self._safe_log("-> [阻断] 未填写激活码但未找到本地 license.lic。")
                 self._safe_update_status(None)
-                self.after(0, lambda: messagebox.showwarning(
-                    "提示",
-                    "未填写激活码时，需要存在本地许可文件 license.lic。\n请先激活或粘贴含脱机包的激活码。"
-                ))
+                self.after(
+                    0,
+                    lambda: messagebox.showwarning(
+                        "提示",
+                        "未填写激活码时，需要存在本地许可文件 license.lic。\n请先激活或粘贴含脱机包的激活码。",
+                    ),
+                )
                 return
         else:
             if os.path.exists(cfg.license_file_path):
@@ -592,10 +665,20 @@ class DemoApp(tk.Tk):
             self.client.validate()
             self._safe_log("【业务端】实时合规性检测: 通过。")
             self._safe_log("=" * 50)
-            self.after(0, lambda: messagebox.showinfo("业务层", "授权正常！\nAI 模板匹配算法已成功启动，正在处理图像帧..."))
+            self.after(
+                0,
+                lambda: messagebox.showinfo(
+                    "业务层", "授权正常！\nAI 模板匹配算法已成功启动，正在处理图像帧..."
+                ),
+            )
         except Exception as e:
             self._safe_log(f"【业务端】授权拦截: {e}")
-            self.after(0, lambda: messagebox.showerror("越权阻断", f"由于未授权或授权已被封禁，算法引擎拒绝启动。\n\n原因: {e}"))
+            self.after(
+                0,
+                lambda: messagebox.showerror(
+                    "越权阻断", f"由于未授权或授权已被封禁，算法引擎拒绝启动。\n\n原因: {e}"
+                ),
+            )
 
     def _close_client_unsafe(self):
         """关闭 client（须在 UI 线程中调用，或通过 after 异步调用）。"""

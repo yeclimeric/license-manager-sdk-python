@@ -6,11 +6,12 @@ import platform
 import socket
 import subprocess
 import uuid
-from typing import List, Tuple, Dict, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 class HardwareProvider:
     """Abstracts hardware fingerprint collection."""
+
     def fingerprint(self) -> Tuple[str, Dict[str, str]]:
         raise NotImplementedError
 
@@ -24,6 +25,7 @@ class DefaultHardwareProvider(HardwareProvider):
       - cpu: CPU model / brand string (best-effort)
       - memory: total physical memory capacity (best-effort)
     """
+
     def __init__(self, fields: Optional[List[str]] = None):
         if not fields:
             self.fields = ["mac", "hostname"]
@@ -49,16 +51,16 @@ class DefaultHardwareProvider(HardwareProvider):
                 mem = self._get_memory()
                 if mem:
                     data["memory"] = mem
-                    
+
         # Deterministic serialization
         keys = sorted(data.keys())
         builder = []
         for k in keys:
             val = str(data[k]).lower()
             builder.append(f"{k}={val};")
-            
+
         full_string = "".join(builder)
-        hash_sum = hashlib.sha256(full_string.encode('utf-8')).hexdigest()
+        hash_sum = hashlib.sha256(full_string.encode("utf-8")).hexdigest()
         return hash_sum, data
 
     def _get_hostname(self) -> str:
@@ -69,11 +71,11 @@ class DefaultHardwareProvider(HardwareProvider):
 
     def _get_mac(self) -> str:
         try:
-            # uuid.getnode() returns MAC of the first active interface 
+            # uuid.getnode() returns MAC of the first active interface
             # or a random 48-bit number if not found (has multicast bit set)
             node = uuid.getnode()
             if (node >> 40) % 2 == 0:  # Not a random MAC
-                mac = ':'.join(('%012x' % node)[i:i+2] for i in range(0, 12, 2))
+                mac = ":".join(("%012x" % node)[i : i + 2] for i in range(0, 12, 2))
                 return mac.lower()
             return ""
         except Exception:
@@ -99,7 +101,7 @@ class DefaultHardwareProvider(HardwareProvider):
                     return env_proc
         except Exception:
             pass
-        
+
         return platform.processor() or platform.machine()
 
     def _get_memory(self) -> str:
@@ -127,8 +129,8 @@ class DefaultHardwareProvider(HardwareProvider):
 
     def _cmd_output(self, cmd: List[str]) -> str:
         try:
-            out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, timeout=2).decode('utf-8')
-            lines = [line.strip() for line in out.split('\n') if line.strip()]
+            out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, timeout=2).decode("utf-8")
+            lines = [line.strip() for line in out.split("\n") if line.strip()]
             for line in lines:
                 lower_line = line.lower()
                 if "name" in lower_line or "totalphysicalmemory" in lower_line:

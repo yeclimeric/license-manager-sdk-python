@@ -1,8 +1,10 @@
-from license_manager.client import Client, ClientOptions, Callbacks
+import os
+
+from license_manager.client import Callbacks, Client, ClientOptions
 from license_manager.config import Config
 from license_manager.hardware import DefaultHardwareProvider
 from license_manager.storage import FileStore
-import os
+
 
 def test_client_init_offline():
     cfg = Config(product="A", version="1", offline=True)
@@ -15,6 +17,7 @@ def test_client_init_offline():
     except ValueError as e:
         assert "offline mode requires preloaded license" in str(e) or "read public key" in str(e)
         print(f"Caught expected error: {e}")
+
 
 if __name__ == "__main__":
     test_client_init_offline()

@@ -1,7 +1,9 @@
-from license_manager.models import LicensePayload
+import json
+
 from license_manager.config import Config
 from license_manager.hardware import DefaultHardwareProvider
-import json
+from license_manager.models import LicensePayload
+
 
 def test_models():
     data = {
@@ -17,10 +19,12 @@ def test_models():
     assert payload.expires_at == payload.end_date
     print("Models verified.")
 
+
 def test_config():
     valid_cfg = Config(product="A", version="1", server="http://a", authorization_code="x")
     valid_cfg.validate()
     print("Config verified.")
+
 
 def test_hardware():
     hw = DefaultHardwareProvider(["mac", "hostname", "cpu", "memory"])
@@ -28,6 +32,7 @@ def test_hardware():
     assert fp is not None
     assert type(details) is dict
     print(f"Hardware verified: fp={fp}, details={json.dumps(details)}")
+
 
 if __name__ == "__main__":
     test_models()
