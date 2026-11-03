@@ -2,7 +2,7 @@ import base64
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -119,17 +119,31 @@ class ActivateResponse:
     heartbeat_interval: int
     payload: Optional[LicensePayload] = None
     public_key: Optional[str] = None  # 服务端返回的最新公钥
+    # 全部有效公钥（当前 + 轮换留档）。服务端轮换签名密钥后经此下发新公钥，
+    # 客户端逐一尝试验签，任一通过即视为可信——客户端无需重新发版。
+    public_keys: List[str] = field(default_factory=list)
+    # 完整签名密钥链（含每级衔接签名）。客户端凭内置根公钥逐级验证，
+    # 即可把整条链纳入信任，离线场景下同样支持密钥轮换。
+    key_chain: List[dict] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: dict) -> "ActivateResponse":
         payload_data = data.get("payload")
         payload = LicensePayload.from_dict(payload_data) if payload_data else None
+        public_keys = data.get("public_keys") or []
+        if not isinstance(public_keys, list):
+            public_keys = []
+        key_chain = data.get("key_chain") or []
+        if not isinstance(key_chain, list):
+            key_chain = []
         return cls(
             license_key=data.get("license_key", ""),
             license_file=data.get("license_file", ""),
             heartbeat_interval=data.get("heartbeat_interval", 0),
             payload=payload,
             public_key=data.get("public_key"),
+            public_keys=[str(k) for k in public_keys if k],
+            key_chain=[c for c in key_chain if isinstance(c, dict)],
         )
 
 
@@ -162,17 +176,30 @@ class HeartbeatResponse:
     heartbeat_interval: Optional[int] = None
     config_updated: Optional[bool] = None
     payload: Optional[LicensePayload] = None
+    # 全部有效公钥（当前 + 轮换留档）。服务端轮换签名密钥后经心跳下发新公钥，
+    # 客户端据此更新信任库，无需重新发版。
+    public_keys: List[str] = field(default_factory=list)
+    # 完整签名密钥链（含每级衔接签名）。
+    key_chain: List[dict] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: dict) -> "HeartbeatResponse":
         payload_data = data.get("payload")
         payload = LicensePayload.from_dict(payload_data) if payload_data else None
+        public_keys = data.get("public_keys") or []
+        if not isinstance(public_keys, list):
+            public_keys = []
+        key_chain = data.get("key_chain") or []
+        if not isinstance(key_chain, list):
+            key_chain = []
         return cls(
             status=data.get("status", ""),
             license_file=data.get("license_file"),
             heartbeat_interval=data.get("heartbeat_interval"),
             config_updated=data.get("config_updated"),
             payload=payload,
+            public_keys=[str(k) for k in public_keys if k],
+            key_chain=[c for c in key_chain if isinstance(c, dict)],
         )
 
 
